@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum PostStatus {
+  draft
+  review
+  published
+  archived
+}
+
+enum ArticleType {
+  question
+  tutorial
+  compare
+  longtail
+}
+
+model Site {
+  id               String      @id @default(cuid())
+  name             String
+  siteKey          String      @unique
+  domain           String      @unique
+  logo             String?
+  themeColor       String?
+  defaultLanguage  String      @default("en")
+  seoTitle         String?
+  seoDescription   String?
+  isActive         Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  postSites        PostSite[]
+  aiTasks          AiTask[]
+}
+
+model Post {
+  id               String      @id @default(cuid())
+  title            String
+  slug             String      @unique
+  excerpt          String?
+  content          String
+  coverImage       String?
+  language         String      @default("en")
+  status           PostStatus  @default(draft)
+  seoTitle         String?
+  seoDescription   String?
+  faq              Json?
+  sourceName       String?
+  sourceUrl        String?
+  publishedAt      DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  categoryId       String?
+  regulatorId      String?
+  category         Category?   @relation(fields: [categoryId], references: [id])
+  regulator        Regulator?  @relation(fields: [regulatorId], references: [id])
+  postSites        PostSite[]
+  postTags         PostTag[]
+  publishJobs      PublishJob[]
+}
+
+model PostSite {
+  postId           String
+  siteId           String
+  createdAt        DateTime @default(now())
+  post             Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  site             Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@id([postId, siteId])
+}
+
+model Category {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  posts            Post[]
+}
+
+model Tag {
+  id               String    @id @default(cuid())
+  name             String    @unique
+  slug             String    @unique
+  postTags         PostTag[]
+}
+
+model PostTag {
+  postId           String
+  tagId            String
+  post             Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag              Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+model Regulator {
+  id               String   @id @default(cuid())
+  name             String
+  code             String   @unique
+  posts            Post[]
+}
+
+model AiTask {
+  id               String      @id @default(cuid())
+  taskName         String
+  enabled          Boolean     @default(true)
+  runTime          String
+  language         String      @default("en")
+  dailyCount       Int         @default(1)
+  keywordSource    String
+  articleType      ArticleType @default(question)
+  autoPublish      Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  site             Site?       @relation(fields: [siteId], references: [id])
+  siteId           String?
+  targetSitesJson  Json?
+  publishJobs      PublishJob[]
+}
+
+model PublishJob {
+  id               String    @id @default(cuid())
+  status           String
+  message          String?
+  createdAt        DateTime  @default(now())
+  task             AiTask?   @relation(fields: [taskId], references: [id])
+  taskId           String?
+  post             Post?     @relation(fields: [postId], references: [id])
+  postId           String?
+}
