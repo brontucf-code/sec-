@@ -1,10 +1,13 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/admin-layout";
 
 type Site = { id: string; name: string };
 type DraftResult = {
   title: string;
+  slug?: string;
+  excerpt?: string;
   seoTitle: string;
   seoDescription: string;
   faq: { question: string; answer: string }[];
@@ -37,16 +40,24 @@ export default function WritingPage() {
   }, []);
 
   const callWriting = async (action: "generate" | "save" | "publish") => {
+    const payload = {
+      ...form,
+      action,
+      draft: action === "generate" ? undefined : result,
+      secondaryKeywords: form.secondaryKeywords
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean)
+    };
+
     const res = await fetch("/api/writing", {
       method: "POST",
-      body: JSON.stringify({
-        ...form,
-        action,
-        secondaryKeywords: form.secondaryKeywords.split(",").map((x) => x.trim())
-      })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
-    setResult(data.draft);
+    if (data.draft) {
+      setResult(data.draft);
+    }
     setLastSavedId(data.post?.id || "");
   };
 
@@ -55,26 +66,57 @@ export default function WritingPage() {
       <div className="grid2">
         <div className="card">
           <h1>AI Writing</h1>
-          <form onSubmit={async (e) => { e.preventDefault(); await callWriting("generate"); }}>
-            <input value={form.primaryKeyword} onChange={(e) => setForm({ ...form, primaryKeyword: e.target.value })} />
-            <input value={form.secondaryKeywords} onChange={(e) => setForm({ ...form, secondaryKeywords: e.target.value })} />
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              await callWriting("generate");
+            }}
+          >
+            <input
+              value={form.primaryKeyword}
+              onChange={(e) => setForm({ ...form, primaryKeyword: e.target.value })}
+            />
+            <input
+              value={form.secondaryKeywords}
+              onChange={(e) => setForm({ ...form, secondaryKeywords: e.target.value })}
+            />
             <div className="grid2">
-              <input value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} />
-              <select value={form.articleType} onChange={(e) => setForm({ ...form, articleType: e.target.value })}>
+              <input
+                value={form.language}
+                onChange={(e) => setForm({ ...form, language: e.target.value })}
+              />
+              <select
+                value={form.articleType}
+                onChange={(e) => setForm({ ...form, articleType: e.target.value })}
+              >
                 <option value="question">问题类</option>
                 <option value="tutorial">教程类</option>
                 <option value="compare">对比类</option>
                 <option value="longtail">长尾类</option>
               </select>
             </div>
-            <input value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value })} />
-            <input value={form.tone} onChange={(e) => setForm({ ...form, tone: e.target.value })} />
-            <input value={form.wordRange} onChange={(e) => setForm({ ...form, wordRange: e.target.value })} />
-            <label>发布站点（可多选）</label>
+            <input
+              value={form.audience}
+              onChange={(e) => setForm({ ...form, audience: e.target.value })}
+            />
+            <input
+              value={form.tone}
+              onChange={(e) => setForm({ ...form, tone: e.target.value })}
+            />
+            <input
+              value={form.wordRange}
+              onChange={(e) => setForm({ ...form, wordRange: e.target.value })}
+            />
+            <label>目标站点（可多选）</label>
             <select
               multiple
               value={form.targetSites}
-              onChange={(e) => setForm({ ...form, targetSites: Array.from(e.target.selectedOptions).map((x) => x.value) })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  targetSites: Array.from(e.target.selectedOptions).map((x) => x.value)
+                })
+              }
             >
               {sites.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -84,8 +126,21 @@ export default function WritingPage() {
             </select>
             <div className="actions-inline">
               <button type="submit">生成文章</button>
-              <button type="button" className="btn-muted" onClick={() => void callWriting("save")}>保存草稿</button>
-              <button type="button" onClick={() => void callWriting("publish")}>一键发布</button>
+              <button
+                type="button"
+                className="btn-muted"
+                disabled={!result}
+                onClick={() => void callWriting("save")}
+              >
+                保存草稿
+              </button>
+              <button
+                type="button"
+                disabled={!result}
+                onClick={() => void callWriting("publish")}
+              >
+                一键发布
+              </button>
             </div>
             {lastSavedId && <p className="hint">最近写入 Post ID: {lastSavedId}</p>}
           </form>
@@ -96,12 +151,22 @@ export default function WritingPage() {
           {result && (
             <div>
               <h3>{result.title}</h3>
-              <p><strong>SEO Title:</strong> {result.seoTitle}</p>
-              <p><strong>SEO Description:</strong> {result.seoDescription}</p>
+              <p>
+                <strong>SEO Title:</strong> {result.seoTitle}
+              </p>
+              <p>
+                <strong>SEO Description:</strong> {result.seoDescription}
+              </p>
               <h4>Outline</h4>
               <ul>{result.outline?.map((x) => <li key={x}>{x}</li>)}</ul>
               <h4>FAQ</h4>
-              <ul>{result.faq?.map((x) => <li key={x.question}><strong>{x.question}</strong>: {x.answer}</li>)}</ul>
+              <ul>
+                {result.faq?.map((x) => (
+                  <li key={x.question}>
+                    <strong>{x.question}</strong>: {x.answer}
+                  </li>
+                ))}
+              </ul>
               <h4>Content</h4>
               <pre>{result.content}</pre>
             </div>
