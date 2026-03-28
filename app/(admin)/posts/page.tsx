@@ -15,7 +15,14 @@ type Post = {
   postSites: { siteId: string; site: Site }[];
 };
 
-const emptyForm = { id: "", title: "", content: "", language: "en", status: "draft", seoTitle: "", seoDescription: "" };
+const emptyForm = { id: "", title: "", content: "", language: "zh", status: "draft", seoTitle: "", seoDescription: "" };
+
+const statusLabelMap: Record<string, string> = {
+  draft: "草稿",
+  review: "待审核",
+  published: "已发布",
+  archived: "已下线"
+};
 
 export default function PostsPage() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -40,12 +47,17 @@ export default function PostsPage() {
     await load();
   };
 
+  const quickUpdateStatus = async (id: string, status: "published" | "archived") => {
+    await fetch("/api/posts", { method: "PATCH", body: JSON.stringify({ id, status }) });
+    await load();
+  };
+
   return (
     <AdminLayout>
       <div className="card">
-        <h1>Posts</h1>
+        <h1>文章管理</h1>
         <form onSubmit={submit}>
-          <input placeholder="标题" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+          <input placeholder="文章标题" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
           <textarea placeholder="正文内容" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} required />
           <div className="grid2">
             <div>
@@ -55,20 +67,15 @@ export default function PostsPage() {
             <div>
               <label>状态</label>
               <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                <option value="draft">draft</option>
-                <option value="review">review</option>
-                <option value="published">published</option>
-                <option value="archived">archived</option>
+                <option value="draft">草稿</option>
+                <option value="review">待审核</option>
+                <option value="published">已发布</option>
+                <option value="archived">已下线</option>
               </select>
             </div>
           </div>
-          <input placeholder="SEO Title" value={form.seoTitle} onChange={(e) => setForm({ ...form, seoTitle: e.target.value })} />
-          <textarea
-            placeholder="SEO Description"
-            value={form.seoDescription}
-            onChange={(e) => setForm({ ...form, seoDescription: e.target.value })}
-            rows={2}
-          />
+          <input placeholder="SEO 标题" value={form.seoTitle} onChange={(e) => setForm({ ...form, seoTitle: e.target.value })} />
+          <textarea placeholder="SEO 描述" value={form.seoDescription} onChange={(e) => setForm({ ...form, seoDescription: e.target.value })} rows={2} />
           <label>绑定站点（可多选）</label>
           <select multiple value={siteIds} onChange={(e) => setSiteIds(Array.from(e.target.selectedOptions).map((x) => x.value))}>
             {sites.map((s) => (
@@ -78,10 +85,17 @@ export default function PostsPage() {
             ))}
           </select>
           <div className="actions-inline">
-            <button type="submit">{editing ? "更新 Post" : "创建 Post"}</button>
+            <button type="submit">{editing ? "保存" : "新建"}</button>
             {editing && (
-              <button type="button" className="btn-muted" onClick={() => { setForm(emptyForm); setSiteIds([]); }}>
-                取消编辑
+              <button
+                type="button"
+                className="btn-muted"
+                onClick={() => {
+                  setForm(emptyForm);
+                  setSiteIds([]);
+                }}
+              >
+                取消
               </button>
             )}
           </div>
@@ -96,7 +110,7 @@ export default function PostsPage() {
               <th>Slug</th>
               <th>状态</th>
               <th>站点</th>
-              <th>操作</th>
+              <th>快捷操作</th>
             </tr>
           </thead>
           <tbody>
@@ -104,25 +118,40 @@ export default function PostsPage() {
               <tr key={p.id}>
                 <td>{p.title}</td>
                 <td>{p.slug}</td>
-                <td>{p.status}</td>
+                <td>{statusLabelMap[p.status] || p.status}</td>
                 <td>{p.postSites.map((s) => s.site.name).join(", ") || "-"}</td>
                 <td>
                   <div className="actions-inline">
-                    <button type="button" className="btn-muted" onClick={() => {
-                      setForm({
-                        id: p.id,
-                        title: p.title,
-                        content: p.content,
-                        language: p.language,
-                        status: p.status,
-                        seoTitle: p.seoTitle || "",
-                        seoDescription: p.seoDescription || ""
-                      });
-                      setSiteIds(p.postSites.map((x) => x.siteId));
-                    }}>编辑</button>
-                    <button type="button" onClick={async()=>{await fetch('/api/posts',{method:'PATCH',body:JSON.stringify({id:p.id,status:'published'})});await load();}}>发布</button>
-                    <button type="button" className="btn-muted" onClick={async()=>{await fetch('/api/posts',{method:'PATCH',body:JSON.stringify({id:p.id,status:'draft'})});await load();}}>转草稿</button>
-                    <button type="button" className="btn-danger" onClick={async()=>{await fetch(`/api/posts?id=${p.id}`,{method:'DELETE'});await load();}}>删除</button>
+                    <button
+                      type="button"
+                      className="btn-muted"
+                      onClick={() => {
+                        setForm({
+                          id: p.id,
+                          title: p.title,
+                          content: p.content,
+                          language: p.language,
+                          status: p.status,
+                          seoTitle: p.seoTitle || "",
+                          seoDescription: p.seoDescription || ""
+                        });
+                        setSiteIds(p.postSites.map((x) => x.siteId));
+                      }}
+                    >
+                      编辑
+                    </button>
+                    <button type="button" onClick={async () => quickUpdateStatus(p.id, "published")}>发布</button>
+                    <button type="button" className="btn-muted" onClick={async () => quickUpdateStatus(p.id, "archived")}>下线</button>
+                    <button
+                      type="button"
+                      className="btn-danger"
+                      onClick={async () => {
+                        await fetch(`/api/posts?id=${p.id}`, { method: "DELETE" });
+                        await load();
+                      }}
+                    >
+                      删除
+                    </button>
                   </div>
                 </td>
               </tr>
