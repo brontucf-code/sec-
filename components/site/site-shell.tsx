@@ -18,6 +18,8 @@ export function SiteShell({ siteKey, siteName, children }: SiteShellProps) {
         <nav className="site-nav">
           <Link href={`/${siteKey}`}>首页</Link>
           <Link href={`/${siteKey}/posts`}>最新文章</Link>
+          <Link href={`/${siteKey}/services`}>办理服务</Link>
+          <Link href={`/${siteKey}/topics/sec`}>SEC专题</Link>
           <Link href={`/${siteKey}/categories`}>分类</Link>
           <Link href={`/${siteKey}/tags`}>标签</Link>
           <Link href={`/${siteKey}/regulators`}>监管机构</Link>
