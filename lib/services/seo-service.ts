@@ -40,17 +40,33 @@ export const seoService = {
   async generateSitemapXml() {
     const rows = await prisma.post.findMany({
       where: { status: "published" },
-      include: { postSites: { include: { site: true } } }
+      include: {
+        category: true,
+        regulator: true,
+        postTags: { include: { tag: true } },
+        postSites: { include: { site: true } }
+      }
     });
 
     const urls = rows.flatMap((post) =>
-      post.postSites.map((ps) =>
-        `<url><loc>https://${ps.site.domain}/posts/${post.slug}</loc><lastmod>${post.updatedAt.toISOString()}</lastmod></url>`
-      )
+      post.postSites.flatMap((ps) => {
+        const base = `https://${ps.site.domain}`;
+        const postUrl = `<url><loc>${base}/posts/${post.slug}</loc><lastmod>${post.updatedAt.toISOString()}</lastmod></url>`;
+        const categoryUrl = post.category
+          ? `<url><loc>${base}/categories/${post.category.slug}</loc><lastmod>${post.updatedAt.toISOString()}</lastmod></url>`
+          : "";
+        const regulatorUrl = post.regulator
+          ? `<url><loc>${base}/regulators/${post.regulator.code}</loc><lastmod>${post.updatedAt.toISOString()}</lastmod></url>`
+          : "";
+        const tagUrls = post.postTags.map(
+          (pt) => `<url><loc>${base}/tags/${pt.tag.slug}</loc><lastmod>${post.updatedAt.toISOString()}</lastmod></url>`
+        );
+        return [postUrl, categoryUrl, regulatorUrl, ...tagUrls].filter(Boolean);
+      })
     );
 
-    return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join(
-      ""
-    )}</urlset>`;
+    return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${Array.from(new Set(
+      urls
+    )).join("")}</urlset>`;
   }
 };

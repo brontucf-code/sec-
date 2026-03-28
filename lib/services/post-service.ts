@@ -23,6 +23,12 @@ export type CreatePostInput = {
   tagIds?: string[];
 };
 
+export type ListPostInput = {
+  keyword?: string;
+  status?: PostStatus | "all";
+  siteId?: string | "all";
+};
+
 function ensureSlug(inputSlug: string | undefined, title: string) {
   return inputSlug?.trim() ? slugify(inputSlug) : seoService.generateSlug(title);
 }
@@ -43,15 +49,26 @@ function toPostData(input: CreatePostInput) {
 }
 
 export const postService = {
-  list: () =>
+  list: (query: ListPostInput = {}) =>
     prisma.post.findMany({
+      where: {
+        status: query.status && query.status !== "all" ? query.status : undefined,
+        postSites: query.siteId && query.siteId !== "all" ? { some: { siteId: query.siteId } } : undefined,
+        OR: query.keyword?.trim()
+          ? [
+              { title: { contains: query.keyword.trim() } },
+              { slug: { contains: query.keyword.trim() } },
+              { content: { contains: query.keyword.trim() } }
+            ]
+          : undefined
+      },
       include: {
         postSites: { include: { site: true } },
         category: true,
         regulator: true,
         postTags: true
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }]
     }),
 
   async create(input: CreatePostInput) {
