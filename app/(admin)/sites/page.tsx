@@ -8,10 +8,21 @@ type Site = {
   siteKey: string;
   domain: string;
   defaultLanguage: string;
+  seoTitle?: string;
+  seoDescription?: string;
   isActive: boolean;
 };
 
-const emptyForm = { id: "", name: "", siteKey: "", domain: "", defaultLanguage: "en", isActive: true };
+const emptyForm = {
+  id: "",
+  name: "",
+  siteKey: "",
+  domain: "",
+  defaultLanguage: "en",
+  seoTitle: "",
+  seoDescription: "",
+  isActive: true
+};
 
 export default function SitesPage() {
   const [sites, setSites] = useState<Site[]>([]);
@@ -41,10 +52,28 @@ export default function SitesPage() {
             value={form.defaultLanguage}
             onChange={(e) => setForm({ ...form, defaultLanguage: e.target.value })}
           />
-          <label className="inline-check"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />启用站点</label>
+          <input
+            placeholder="默认 SEO Title"
+            value={form.seoTitle}
+            onChange={(e) => setForm({ ...form, seoTitle: e.target.value })}
+          />
+          <textarea
+            placeholder="默认 SEO Description"
+            rows={2}
+            value={form.seoDescription}
+            onChange={(e) => setForm({ ...form, seoDescription: e.target.value })}
+          />
+          <label className="inline-check">
+            <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+            启用站点
+          </label>
           <div className="actions-inline">
             <button type="submit">{editing ? "更新站点" : "新增站点"}</button>
-            {editing && <button className="btn-muted" type="button" onClick={() => setForm(emptyForm)}>取消</button>}
+            {editing && (
+              <button className="btn-muted" type="button" onClick={() => setForm(emptyForm)}>
+                取消
+              </button>
+            )}
           </div>
         </form>
       </div>
@@ -55,6 +84,7 @@ export default function SitesPage() {
               <th>Name</th>
               <th>Key</th>
               <th>Domain</th>
+              <th>Default SEO</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -65,15 +95,33 @@ export default function SitesPage() {
                 <td>{s.name}</td>
                 <td>{s.siteKey}</td>
                 <td>{s.domain}</td>
+                <td>
+                  <div>{s.seoTitle || "-"}</div>
+                  <small>{s.seoDescription || "-"}</small>
+                </td>
                 <td>{s.isActive ? "active" : "inactive"}</td>
                 <td>
                   <div className="actions-inline">
-                    <button className="btn-muted" onClick={() => setForm(s)}>编辑</button>
-                    <button onClick={async () => {
-                      await fetch("/api/sites", { method: "PUT", body: JSON.stringify({ ...s, isActive: !s.isActive }) });
-                      await load();
-                    }}>{s.isActive ? "停用" : "启用"}</button>
-                    <button className="btn-danger" onClick={async()=>{await fetch(`/api/sites?id=${s.id}`,{method:"DELETE"});await load();}}>Delete</button>
+                    <button className="btn-muted" onClick={() => setForm({ ...s, seoTitle: s.seoTitle || "", seoDescription: s.seoDescription || "" })}>
+                      编辑
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await fetch("/api/sites", { method: "PUT", body: JSON.stringify({ ...s, isActive: !s.isActive }) });
+                        await load();
+                      }}
+                    >
+                      {s.isActive ? "停用" : "启用"}
+                    </button>
+                    <button
+                      className="btn-danger"
+                      onClick={async () => {
+                        await fetch(`/api/sites?id=${s.id}`, { method: "DELETE" });
+                        await load();
+                      }}
+                    >
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>

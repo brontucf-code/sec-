@@ -24,8 +24,18 @@ function mapBody(body: any) {
   };
 }
 
-export async function GET() {
-  return NextResponse.json(await postService.list());
+export async function GET(req: NextRequest) {
+  const keyword = req.nextUrl.searchParams.get("keyword") ?? undefined;
+  const status = req.nextUrl.searchParams.get("status");
+  const siteId = req.nextUrl.searchParams.get("siteId") ?? undefined;
+
+  return NextResponse.json(
+    await postService.list({
+      keyword,
+      siteId,
+      status: status && Object.values(PostStatus).includes(status as PostStatus) ? (status as PostStatus) : "all"
+    })
+  );
 }
 
 export async function POST(req: NextRequest) {
