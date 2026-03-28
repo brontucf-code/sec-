@@ -15,7 +15,12 @@ export default async function SitePostsPage({ params }: { params: Promise<{ site
     <div style={{ maxWidth: 860, margin: "0 auto", padding: 24 }}>
       <h1>{site.name} Articles</h1>
       {posts.map((p) => (
-        <article key={p.id}><h2><Link href={`/${siteKey}/posts/${p.slug}`}>{p.title}</Link></h2><p>{p.excerpt}</p></article>
+        <article key={p.id} style={{ marginBottom: 24 }}>
+          <h2>
+            <Link href={`/${siteKey}/posts/${p.slug}`}>{p.title}</Link>
+          </h2>
+          <p>{p.excerpt || p.content.slice(0, 160)}</p>
+        </article>
       ))}
     </div>
   );
