@@ -1,4 +1,4 @@
-import { PostStatus } from "@prisma/client";
+import { PostStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
 
@@ -22,6 +22,40 @@ export type CreatePostInput = {
   tagIds?: string[];
 };
 
+function toPostData(input: CreatePostInput, id?: string): Prisma.PostCreateInput | Prisma.PostUpdateInput {
+  const base = {
+    title: input.title,
+    slug: input.slug?.trim() ? slugify(input.slug) : slugify(input.title),
+    excerpt: input.excerpt,
+    content: input.content,
+    coverImage: input.coverImage,
+    language: input.language,
+    status: input.status,
+    seoTitle: input.seoTitle,
+    seoDescription: input.seoDescription,
+    faq: input.faq as Prisma.InputJsonValue,
+    sourceName: input.sourceName,
+    sourceUrl: input.sourceUrl,
+    publishedAt: input.publishedAt
+  };
+
+  return {
+    ...base,
+    category: input.categoryId ? { connect: { id: input.categoryId } } : id ? { disconnect: true } : undefined,
+    regulator: input.regulatorId ? { connect: { id: input.regulatorId } } : id ? { disconnect: true } : undefined,
+    postSites: input.siteIds?.length
+      ? {
+          create: input.siteIds.map((siteId) => ({ site: { connect: { id: siteId } } }))
+        }
+      : undefined,
+    postTags: input.tagIds?.length
+      ? {
+          create: input.tagIds.map((tagId) => ({ tag: { connect: { id: tagId } } }))
+        }
+      : undefined
+  };
+}
+
 export const postService = {
   list: () =>
     prisma.post.findMany({
@@ -30,29 +64,17 @@ export const postService = {
     }),
 
   async create(input: CreatePostInput) {
-    const slug = input.slug?.trim() ? slugify(input.slug) : slugify(input.title);
     return prisma.post.create({
-      data: {
-        ...input,
-        slug,
-        postSites: input.siteIds?.length ? { create: input.siteIds.map((siteId) => ({ siteId })) } : undefined,
-        postTags: input.tagIds?.length ? { create: input.tagIds.map((tagId) => ({ tagId })) } : undefined
-      }
+      data: toPostData(input) as Prisma.PostCreateInput
     });
   },
 
   async update(id: string, input: CreatePostInput) {
-    const slug = input.slug?.trim() ? slugify(input.slug) : slugify(input.title);
     await prisma.postSite.deleteMany({ where: { postId: id } });
     await prisma.postTag.deleteMany({ where: { postId: id } });
     return prisma.post.update({
       where: { id },
-      data: {
-        ...input,
-        slug,
-        postSites: input.siteIds?.length ? { create: input.siteIds.map((siteId) => ({ siteId })) } : undefined,
-        postTags: input.tagIds?.length ? { create: input.tagIds.map((tagId) => ({ tagId })) } : undefined
-      }
+      data: toPostData(input, id) as Prisma.PostUpdateInput
     });
   },
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
+import type { Route } from "next";
 
-const menu = [
+const menu: Array<[string, Route]> = [
   ["Dashboard", "/"],
   ["Sites", "/sites"],
   ["Posts", "/posts"],
