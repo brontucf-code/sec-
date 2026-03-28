@@ -3,16 +3,25 @@ import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/admin-layout";
 
 type Site = { id: string; name: string };
+type PublishJob = { id: string; status: string; message?: string; createdAt: string };
+type Task = {
+  id: string;
+  taskName: string;
+  runTime: string;
+  dailyCount: number;
+  enabled: boolean;
+  publishJobs?: PublishJob[];
+};
 
 export default function AutoPublishPage() {
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [form, setForm] = useState({
-    taskName: "Daily SEC",
+    taskName: "每日 SEC 选题",
     enabled: true,
     runTime: "09:00",
     targetSites: [] as string[],
-    language: "en",
+    language: "zh",
     dailyCount: 1,
     keywordSource: "Form D",
     articleType: "tutorial",
@@ -28,8 +37,8 @@ export default function AutoPublishPage() {
   return (
     <AdminLayout>
       <div className="card">
-        <h1>Auto Publish</h1>
-        <p className="hint">Mock 定时器每分钟检查一次 runTime（UTC）并生成文章到 Posts。</p>
+        <h1>自动发布任务</h1>
+        <p className="hint">调度器每分钟检查一次 runTime（UTC）并自动生成文章到「文章管理」。</p>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -37,18 +46,18 @@ export default function AutoPublishPage() {
             await load();
           }}
         >
-          <input value={form.taskName} onChange={(e) => setForm({ ...form, taskName: e.target.value })} />
+          <input placeholder="任务名称" value={form.taskName} onChange={(e) => setForm({ ...form, taskName: e.target.value })} />
           <div className="grid2">
-            <input value={form.runTime} onChange={(e) => setForm({ ...form, runTime: e.target.value })} />
-            <input value={form.keywordSource} onChange={(e) => setForm({ ...form, keywordSource: e.target.value })} />
+            <input placeholder="执行时间（UTC）" value={form.runTime} onChange={(e) => setForm({ ...form, runTime: e.target.value })} />
+            <input placeholder="关键词来源" value={form.keywordSource} onChange={(e) => setForm({ ...form, keywordSource: e.target.value })} />
           </div>
           <div className="grid2">
-            <input type="number" value={form.dailyCount} onChange={(e) => setForm({ ...form, dailyCount: Number(e.target.value) })} />
+            <input type="number" placeholder="日产量" value={form.dailyCount} onChange={(e) => setForm({ ...form, dailyCount: Number(e.target.value) })} />
             <select value={form.articleType} onChange={(e) => setForm({ ...form, articleType: e.target.value })}>
-              <option value="question">question</option>
-              <option value="tutorial">tutorial</option>
-              <option value="compare">compare</option>
-              <option value="longtail">longtail</option>
+              <option value="question">问题类</option>
+              <option value="tutorial">教程类</option>
+              <option value="compare">对比类</option>
+              <option value="longtail">长尾类</option>
             </select>
           </div>
           <label>目标站点</label>
@@ -56,28 +65,33 @@ export default function AutoPublishPage() {
             {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
           <label className="inline-check"><input type="checkbox" checked={form.autoPublish} onChange={(e) => setForm({ ...form, autoPublish: e.target.checked })} />自动发布</label>
-          <button type="submit">创建任务</button>
+          <button type="submit">新建</button>
         </form>
       </div>
       <div className="card">
         <table>
-          <thead><tr><th>Task</th><th>Runtime</th><th>Daily</th><th>Last Jobs</th><th>Action</th></tr></thead>
+          <thead><tr><th>任务名</th><th>执行时间</th><th>日产量</th><th>执行状态</th><th>最近执行</th><th>操作</th></tr></thead>
           <tbody>
-            {tasks.map((t) => (
-              <tr key={t.id}>
-                <td>{t.taskName}</td>
-                <td>{t.runTime} UTC</td>
-                <td>{t.dailyCount}</td>
-                <td>{t.publishJobs?.slice(0, 2).map((j: any) => j.message).join(" | ") || "-"}</td>
-                <td>
-                  <div className="actions-inline">
-                    <button onClick={async()=>{await fetch('/api/ai-tasks',{method:'PATCH',body:JSON.stringify({id:t.id,action:'run-now'})});await load();}}>立即执行</button>
-                    <button className="btn-muted" onClick={async()=>{await fetch('/api/ai-tasks',{method:'PATCH',body:JSON.stringify({id:t.id,enabled:!t.enabled})});await load();}}>{t.enabled ? "停用" : "启用"}</button>
-                    <button className="btn-danger" onClick={async()=>{await fetch(`/api/ai-tasks?id=${t.id}`,{method:'DELETE'});await load();}}>删除</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {tasks.map((t) => {
+              const lastJob = t.publishJobs?.[0];
+              const statusText = !t.enabled ? "已停用" : lastJob?.status === "success" ? "执行成功" : lastJob?.status ? `执行异常(${lastJob.status})` : "待执行";
+              return (
+                <tr key={t.id}>
+                  <td>{t.taskName}</td>
+                  <td>{t.runTime} UTC</td>
+                  <td>{t.dailyCount}</td>
+                  <td>{statusText}</td>
+                  <td>{lastJob ? `${new Date(lastJob.createdAt).toLocaleString()} / ${lastJob.message || "-"}` : "-"}</td>
+                  <td>
+                    <div className="actions-inline">
+                      <button onClick={async () => { await fetch("/api/ai-tasks", { method: "PATCH", body: JSON.stringify({ id: t.id, action: "run-now" }) }); await load(); }}>发布</button>
+                      <button className="btn-muted" onClick={async () => { await fetch("/api/ai-tasks", { method: "PATCH", body: JSON.stringify({ id: t.id, enabled: !t.enabled }) }); await load(); }}>{t.enabled ? "下线" : "发布"}</button>
+                      <button className="btn-danger" onClick={async () => { await fetch(`/api/ai-tasks?id=${t.id}`, { method: "DELETE" }); await load(); }}>删除</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
