@@ -11,7 +11,7 @@ const menu = [
   ["Auto Publish", "/auto-publish"],
   ["SEO", "/seo"],
   ["Settings", "/settings"]
-];
+] as const;
 
 export function Sidebar() {
   return (
