@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { AdminLayout } from "@/components/admin-layout";
+import { getInternalLinkRules } from "@/lib/internal-linking";
 
 type Post = {
   id: string;
@@ -33,6 +34,7 @@ export default function SeoPage() {
   const seoTitle = current?.seoTitle || `${current?.title || ""} | SEC 内容中心`;
   const seoDescription = current?.seoDescription || (current?.content || "").slice(0, 155);
   const related = posts.filter((p) => p.id !== current?.id && p.postSites.some((s) => current?.postSites.some((x) => x.siteId === s.siteId))).slice(0, 5);
+  const internalRules = getInternalLinkRules("demo");
 
   return (
     <AdminLayout>
@@ -57,6 +59,14 @@ export default function SeoPage() {
             <ul>{related.map((r) => <li key={r.id}>{r.title} ({r.slug})</li>)}</ul>
             <h3>FAQ 输出位</h3>
             <pre>{JSON.stringify(current.faq || [], null, 2)}</pre>
+            <h3>内链规则（可配置）</h3>
+            <ul>
+              {internalRules.map((rule) => (
+                <li key={rule.keyword}>
+                  <code>{rule.keyword}</code> → <code>{rule.href}</code>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}

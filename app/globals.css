@@ -46,3 +46,18 @@ pre { white-space: pre-wrap; word-break: break-word; background:#f8fafc; padding
 .article-content { line-height:1.8; }
 .faq-list { display:grid; gap:10px; }
 .faq-card { border:1px solid #e2e8f0; border-radius:10px; padding:12px; background:#f8fafc; }
+
+.service-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:12px; }
+.service-card { background:#fff; border:1px solid #dbeafe; border-radius:12px; padding:14px; }
+.service-card h3 { margin-top:0; }
+.service-detail { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:18px; margin-bottom:18px; }
+.service-intro { font-size:16px; line-height:1.8; }
+.conversion-cta { margin-top:18px; background:linear-gradient(135deg,#eff6ff,#f0f9ff); border:1px solid #bfdbfe; border-radius:12px; padding:16px; }
+.conversion-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+.btn-primary-link,.btn-secondary-link { display:inline-block; width:auto; padding:10px 14px; border-radius:9px; font-weight:700; }
+.btn-primary-link { background:#1d4ed8; color:#fff; }
+.btn-secondary-link { background:#e2e8f0; color:#0f172a; }
+.contact-line { color:#334155; font-size:14px; margin-top:8px; }
+.inline-link { color:#1d4ed8; text-decoration:underline; margin:0 4px; }
+.article-content p { margin: 0 0 10px; }
+.article-content h3,.article-content h4 { margin: 14px 0 8px; }
