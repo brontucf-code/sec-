@@ -23,41 +23,70 @@ function shouldRunTask(task: AiTask, now = new Date()) {
 
 async function executeTask(task: AiTask) {
   runTracker.set(task.id, minuteStamp());
-  const keywords = [`SEC ${task.keywordSource}`, `Reg D ${task.keywordSource}`, `Compliance ${task.keywordSource}`].slice(
-    0,
-    task.dailyCount
-  );
 
-  for (const keyword of keywords) {
-    const draft = await aiWriterService.generate({
-      primaryKeyword: keyword,
-      secondaryKeywords: ["EDGAR", "Form D", "RIA", "ERA"],
-      language: task.language,
-      articleType: task.articleType,
-      audience: "compliance teams",
-      tone: "professional",
-      wordRange: "1200-1600",
-      generateTitle: true,
-      generateMeta: true,
-      generateFaq: true,
-      generateOutline: true,
-      generateBody: true
-    });
+  const keywords = await prisma.keywordPool.findMany({
+    where: { isUsed: false, language: task.language },
+    orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
+    take: task.dailyCount
+  });
 
-    const post = await postService.create({
-      title: draft.title,
-      content: draft.content,
-      excerpt: draft.content.slice(0, 200),
-      seoTitle: draft.seoTitle,
-      seoDescription: draft.seoDescription,
-      faq: seoService.normalizeFaq(draft.faq),
-      language: task.language,
-      status: task.autoPublish ? PostStatus.published : PostStatus.draft,
-      publishedAt: task.autoPublish ? new Date() : null,
-      siteIds: Array.isArray(task.targetSitesJson) ? (task.targetSitesJson as string[]) : []
-    });
+  if (!keywords.length) {
+    await publishService.createJob(task.id, null, "failed", `No unused keywords for language=${task.language}`);
+    return;
+  }
 
-    await publishService.createJob(task.id, post.id, "success", "Mock scheduler executed and auto-generated post");
+  for (const keywordItem of keywords) {
+    try {
+      const draft = await aiWriterService.generate({
+        primaryKeyword: keywordItem.keyword,
+        secondaryKeywords: ["EDGAR", "Form D", "RIA", "ERA"],
+        language: task.language,
+        articleType: task.articleType,
+        audience: "compliance teams",
+        tone: "professional",
+        wordRange: "1200-1600",
+        generateTitle: true,
+        generateMeta: true,
+        generateFaq: true,
+        generateOutline: true,
+        generateBody: true
+      });
+
+      const post = await postService.create({
+        title: draft.title,
+        content: draft.content,
+        excerpt: draft.content.slice(0, 200),
+        seoTitle: draft.seoTitle,
+        seoDescription: draft.seoDescription,
+        faq: seoService.normalizeFaq(draft.faq),
+        language: task.language,
+        status: PostStatus.draft,
+        publishedAt: null,
+        siteIds: Array.isArray(task.targetSitesJson) ? (task.targetSitesJson as string[]) : []
+      });
+
+      let finalPostId: string | null = post.id;
+      if (task.autoPublish) {
+        await publishService.publish(post.id);
+      }
+
+      await prisma.keywordPool.update({ where: { id: keywordItem.id }, data: { isUsed: true } });
+      await publishService.createJob(
+        task.id,
+        finalPostId,
+        "success",
+        task.autoPublish
+          ? `Generated and published from keyword: ${keywordItem.keyword}`
+          : `Generated draft from keyword: ${keywordItem.keyword}`
+      );
+    } catch (error) {
+      await publishService.createJob(
+        task.id,
+        null,
+        "failed",
+        `Keyword ${keywordItem.keyword} failed: ${error instanceof Error ? error.message : "unknown error"}`
+      );
+    }
   }
 }
 

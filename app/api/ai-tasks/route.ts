@@ -20,9 +20,8 @@ export async function POST(req: NextRequest) {
       taskName: body.taskName,
       enabled: body.enabled ?? true,
       runTime: body.runTime,
-      language: body.language,
+      language: body.language || "en",
       dailyCount: Number(body.dailyCount ?? 1),
-      keywordSource: body.keywordSource,
       articleType: body.articleType,
       autoPublish: body.autoPublish ?? false,
       targetSitesJson: body.targetSites ?? []
@@ -48,7 +47,6 @@ export async function PATCH(req: NextRequest) {
       runTime: body.runTime,
       language: body.language,
       dailyCount: body.dailyCount,
-      keywordSource: body.keywordSource,
       articleType: body.articleType,
       autoPublish: body.autoPublish,
       targetSitesJson: body.targetSites

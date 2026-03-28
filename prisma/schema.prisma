@@ -111,7 +111,6 @@ model AiTask {
   runTime          String
   language         String      @default("en")
   dailyCount       Int         @default(1)
-  keywordSource    String
   articleType      ArticleType @default(question)
   autoPublish      Boolean     @default(false)
   createdAt        DateTime    @default(now())
@@ -120,6 +119,17 @@ model AiTask {
   siteId           String?
   targetSitesJson  Json?
   publishJobs      PublishJob[]
+}
+
+model KeywordPool {
+  id               String   @id @default(cuid())
+  keyword          String
+  type             String
+  language         String   @default("en")
+  priority         Int      @default(1)
+  isUsed           Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model PublishJob {
