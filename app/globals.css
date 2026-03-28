@@ -13,3 +13,12 @@ table { width:100%; border-collapse: collapse; }
 th,td { text-align:left; padding:8px; border-bottom:1px solid #e5e7eb; }
 input,select,textarea,button { width:100%; padding:8px; margin-top:6px; margin-bottom:10px; border:1px solid #d1d5db; border-radius:8px; }
 button { cursor:pointer; background:#1d4ed8; color:#fff; border:none; }
+
+.actions-inline { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+.actions-inline button { width:auto; margin:0; }
+.btn-muted { background:#475569; }
+.btn-danger { background:#b91c1c; }
+.inline-check { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.inline-check input { width:auto; margin:0; }
+.hint { color:#64748b; font-size:13px; }
+pre { white-space: pre-wrap; word-break: break-word; background:#f8fafc; padding:10px; border-radius:8px; }
